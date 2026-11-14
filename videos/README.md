@@ -1,6 +1,6 @@
 # Video transcripts
 
-Transcripts of the videos in the [GTM engineer playlist](https://www.youtube.com/playlist?list=PLEj5JgcDjKAE).
+Transcripts of the videos in the [gtm engineering](https://www.youtube.com/playlist?list=PLEj5JgcDjKAE) YouTube playlist.
 
 Generated locally: audio via yt-dlp, speech-to-text with Whisper large-v3 (faster-whisper), speaker separation via ECAPA voice embeddings + clustering. Expect occasional misheard names/tools and speaker mislabels around quick back-and-forth exchanges.
 

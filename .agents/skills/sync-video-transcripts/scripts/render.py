@@ -1,12 +1,9 @@
 """Markdown rendering for video transcripts.
 
   render.py video <info.json> <words.json> <videos_dir>   write the next NN-slug.md, print its path
-  render.py index <videos_dir>                             rebuild videos/README.md from file headers
-  render.py playlist                                       print the playlist URL (single source of truth)
+  render.py index <videos_dir> <playlist_url> <title>      rebuild <videos_dir>/README.md from file headers
 """
 import glob, json, os, re, sys
-
-PLAYLIST_URL = "https://www.youtube.com/playlist?list=PLEj5JgcDjKAE"
 
 # Recurring Whisper mishearings of GTM tool names. Extend when a new one shows up twice.
 FIXUPS = [(r"\b(cloud|claude|slot) ?code\b", "Claude Code"), (r"\bcloud co-?work\b", "Claude Cowork"),
@@ -116,7 +113,7 @@ def render_video(info_path, words_path, dest):
     print(path)
 
 
-def rebuild_index(dest):
+def rebuild_index(dest, playlist_url, playlist_title):
     esc = lambda s: s.replace("|", "\\|")
     rows = []
     for f in sorted(glob.glob(os.path.join(dest, "[0-9]*-*.md"))):
@@ -127,7 +124,7 @@ def rebuild_index(dest):
         rows.append(f"| {n} | [{esc(title)}]({os.path.basename(f)}) | {esc(field('Channel'))} | "
                     f"{field('Duration')} | {esc(field('Speakers'))} |")
     open(os.path.join(dest, "README.md"), "w").write(
-        f"# Video transcripts\n\nTranscripts of the videos in the [GTM engineer playlist]({PLAYLIST_URL}).\n\n"
+        f"# Video transcripts\n\nTranscripts of the videos in the [{playlist_title}]({playlist_url}) YouTube playlist.\n\n"
         "Generated locally: audio via yt-dlp, speech-to-text with Whisper large-v3 (faster-whisper), "
         "speaker separation via ECAPA voice embeddings + clustering. Expect occasional misheard names/tools and "
         "speaker mislabels around quick back-and-forth exchanges.\n\n"
@@ -137,7 +134,5 @@ def rebuild_index(dest):
 if __name__ == "__main__":
     if sys.argv[1] == "video":
         render_video(*sys.argv[2:5])
-    elif sys.argv[1] == "index":
-        rebuild_index(sys.argv[2])
     else:
-        print(PLAYLIST_URL)
+        rebuild_index(*sys.argv[2:5])

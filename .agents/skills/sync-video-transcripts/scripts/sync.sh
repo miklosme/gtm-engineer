@@ -1,13 +1,16 @@
 #!/usr/bin/env bash
-# Transcribe playlist videos that have no transcript in videos/ yet.
-# Prints one line per new file: NEW <path>. Prints nothing new when the workspace is up to date.
+# Usage: sync.sh [--index] <playlist_url> [videos_dir]   (videos_dir defaults to <repo>/videos)
+# Default: transcribe playlist videos that have no transcript in videos_dir yet.
+#   Prints one line per new file: NEW <path>. Prints nothing new when the workspace is up to date.
+# --index: rebuild videos_dir/README.md, titled with the playlist's YouTube title.
 set -euo pipefail
 
+INDEX=0
+[ "${1:-}" = "--index" ] && { INDEX=1; shift; }
+PLAYLIST="${1:?usage: sync.sh [--index] <playlist_url> [videos_dir]}"
 HERE="$(cd "$(dirname "$0")" && pwd)"
-PLAYLIST="$(python3 -I "$HERE/render.py" playlist)"
-ROOT="$(git -C "$HERE" rev-parse --show-toplevel)"
-VIDEOS="$ROOT/videos"
-VENV="${XDG_CACHE_HOME:-$HOME/.cache}/gtm-engineer-transcripts/venv"
+VIDEOS="${2:-$(git rev-parse --show-toplevel)/videos}"
+VENV="${XDG_CACHE_HOME:-$HOME/.cache}/video-transcripts/venv"
 UV="$(command -v uv || echo "$HOME/.local/bin/uv")"
 PY="$VENV/bin/python"
 mkdir -p "$VIDEOS"
@@ -22,6 +25,13 @@ fi
 "$UV" pip install -q -p "$PY" -U "yt-dlp[default]"
 YTDLP=("$VENV/bin/yt-dlp" --no-warnings --js-runtimes node)
 export LD_LIBRARY_PATH="$("$PY" -c 'import nvidia.cublas as a, nvidia.cudnn as b; print(a.__path__[0]+"/lib:"+b.__path__[0]+"/lib")')"
+
+if [ "$INDEX" = 1 ]; then
+  # -J gives the playlist's own metadata; per-entry fields like playlist_title are unreliable here.
+  title="$("${YTDLP[@]}" --flat-playlist -J "$PLAYLIST" | "$PY" -c 'import json,sys; print(json.load(sys.stdin).get("title") or "")')"
+  [ -n "$title" ] || { echo "could not read the playlist title" >&2; exit 1; }
+  exec python3 -I "$HERE/render.py" index "$VIDEOS" "$PLAYLIST" "$title"
+fi
 
 WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT
